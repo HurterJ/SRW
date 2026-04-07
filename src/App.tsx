@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { createRoot } from 'react-dom/client';
 import type { TimesheetData, Worksite, DayEntry } from './types';
 import {
   getDaysInMonth,
@@ -9,6 +10,7 @@ import {
   calculateHours,
 } from './utils/dateUtils';
 import { generatePDF } from './utils/pdfGenerator';
+import PrintSheet from './components/PrintSheet';
 
 const DEFAULT_WORKSITES: Worksite[] = [
   { id: '1', number: '20834A02', abbreviation: 'SCII', fullName: 'SCII' },
@@ -129,6 +131,35 @@ function TimeInput({
 }
 
 // ─── Main App ──────────────────────────────────────────────────────────────
+
+// Opens the PrintSheet in a new window and triggers print dialog
+function openPrintWindow(data: TimesheetData) {
+  const win = window.open('', '_blank', 'width=1200,height=900');
+  if (!win) return;
+  win.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="utf-8"/>
+    <title>CDH_${data.employeeName}_${getMonthName(data.month)}_${data.year}</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background: white; }
+      @page { size: A4 landscape; margin: 8mm; }
+      @media print {
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      }
+    </style>
+  </head><body><div id="root"></div></body></html>`);
+  win.document.close();
+
+  const container = win.document.getElementById('root')!;
+  const root = createRoot(container);
+  root.render(<PrintSheet data={data} />);
+
+  // Wait for render, then print
+  setTimeout(() => {
+    win.focus();
+    win.print();
+  }, 600);
+}
 
 export default function App() {
   const [data, setData] = useState<TimesheetData>(initialData);
@@ -532,12 +563,20 @@ export default function App() {
             </div>
           </div>
 
-          <button
-            onClick={() => generatePDF(data)}
-            className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded text-sm tracking-wide transition-colors shadow"
-          >
-            Générer le PDF — {getMonthName(data.month)} {data.year}
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => openPrintWindow(data)}
+              className="flex-1 bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded text-sm tracking-wide transition-colors shadow"
+            >
+              🖨 Imprimer / Exporter PDF (format F012)
+            </button>
+            <button
+              onClick={() => generatePDF(data)}
+              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded text-sm tracking-wide transition-colors shadow"
+            >
+              ⬇ Télécharger PDF rapide
+            </button>
+          </div>
         </section>
       </main>
     </div>
