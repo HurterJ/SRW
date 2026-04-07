@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { TimesheetData, Worksite, DayEntry } from './types';
 import {
@@ -11,6 +11,13 @@ import {
 } from './utils/dateUtils';
 import { generatePDF } from './utils/pdfGenerator';
 import PrintSheet from './components/PrintSheet';
+import ProfileSelector from './components/ProfileSelector';
+import {
+  getCurrentProfile,
+  setCurrentProfile,
+  loadData,
+  saveData,
+} from './utils/storage';
 
 const DEFAULT_WORKSITES: Worksite[] = [
   { id: '1', number: '20834A02', abbreviation: 'SCII', fullName: 'SCII' },
@@ -68,20 +75,30 @@ function buildEntries(
 
 const now = new Date();
 
-const initialData: TimesheetData = {
-  employeeName: 'HURTER Julien',
-  month: now.getMonth() + 1,
-  year: now.getFullYear(),
-  reference: 'F012',
-  worksites: DEFAULT_WORKSITES,
-  entries: {},
-  defaultContractedHours: 8.5,
-  defaultMorningStart: '08:00',
-  defaultMorningEnd: '12:15',
-  defaultAfternoonStart: '13:00',
-  defaultAfternoonEnd: '17:30',
-};
-initialData.entries = buildEntries(initialData.year, initialData.month, {}, initialData);
+function makeInitialData(name: string): TimesheetData {
+  const saved = loadData(name);
+  const base: TimesheetData = {
+    employeeName: name,
+    month: now.getMonth() + 1,
+    year: now.getFullYear(),
+    reference: 'F012',
+    worksites: DEFAULT_WORKSITES,
+    entries: {},
+    defaultContractedHours: 8.5,
+    defaultMorningStart: '08:00',
+    defaultMorningEnd: '12:15',
+    defaultAfternoonStart: '13:00',
+    defaultAfternoonEnd: '17:30',
+    ...saved,
+  };
+  // Rebuild entries if none saved for current month
+  const monthKey = `${base.year}-${String(base.month).padStart(2, '0')}`;
+  const hasEntries = Object.keys(base.entries).some(k => k.startsWith(monthKey));
+  if (!hasEntries) {
+    base.entries = { ...base.entries, ...buildEntries(base.year, base.month, base.entries, base) };
+  }
+  return base;
+}
 
 // ─── Small UI helpers ──────────────────────────────────────────────────────
 
@@ -162,7 +179,31 @@ function openPrintWindow(data: TimesheetData) {
 }
 
 export default function App() {
-  const [data, setData] = useState<TimesheetData>(initialData);
+  const [profile, setProfile] = useState<string | null>(getCurrentProfile);
+  const [data, setData] = useState<TimesheetData>(() =>
+    profile ? makeInitialData(profile) : makeInitialData('default')
+  );
+
+  // Auto-save whenever data changes
+  useEffect(() => {
+    if (profile) saveData(profile, data);
+  }, [data, profile]);
+
+  // Profile selection
+  const handleSelectProfile = useCallback((name: string) => {
+    setCurrentProfile(name);
+    setProfile(name);
+    setData(makeInitialData(name));
+  }, []);
+
+  const handleSwitchProfile = useCallback(() => {
+    setCurrentProfile('');
+    setProfile(null);
+  }, []);
+
+  if (!profile) {
+    return <ProfileSelector onSelect={handleSelectProfile} />;
+  }
 
   const updateField = useCallback(
     <K extends keyof TimesheetData>(key: K, value: TimesheetData[K]) => {
@@ -232,8 +273,19 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Page header */}
-      <header className="bg-blue-800 text-white px-6 py-4 shadow">
+      <header className="bg-blue-800 text-white px-6 py-3 shadow flex items-center justify-between">
         <h1 className="text-xl font-bold tracking-wide">Contrôle des Heures — Générateur PDF</h1>
+        <div className="flex items-center gap-3">
+          <span className="text-blue-200 text-sm">
+            Profil : <strong className="text-white">{profile}</strong>
+          </span>
+          <button
+            onClick={handleSwitchProfile}
+            className="text-xs bg-blue-600 hover:bg-blue-500 border border-blue-400 rounded px-3 py-1 transition-colors"
+          >
+            Changer
+          </button>
+        </div>
       </header>
 
       <main className="max-w-screen-2xl mx-auto p-4 space-y-4">
