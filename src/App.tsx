@@ -19,10 +19,19 @@ const DEFAULT_WORKSITES: Worksite[] = [
   { id: '6', number: '03607A39', abbreviation: 'CTA', fullName: 'Central Thermique' },
 ];
 
+// Friday has 8h instead of 8.5h contractual (standard in construction)
+function getContractedHours(date: Date, defaultHours: number): number {
+  const day = date.getDay();
+  if (day === 5) return 8;   // Vendredi
+  if (day === 0 || day === 6) return 0;
+  return defaultHours;
+}
+
 function makeDefaultEntry(
   dateStr: string,
   data: Pick<TimesheetData, 'defaultMorningStart' | 'defaultMorningEnd' | 'defaultAfternoonStart' | 'defaultAfternoonEnd' | 'defaultContractedHours'>
 ): DayEntry {
+  const date = new Date(dateStr);
   return {
     date: dateStr,
     morning: { start: data.defaultMorningStart, end: data.defaultMorningEnd },
@@ -32,7 +41,7 @@ function makeDefaultEntry(
     remark: '',
     isHoliday: false,
     isVacation: false,
-    contractedHours: data.defaultContractedHours,
+    contractedHours: getContractedHours(date, data.defaultContractedHours),
   };
 }
 
@@ -174,15 +183,18 @@ export default function App() {
 
   const worksiteHours: Record<string, number> = {};
   let totalHours = 0;
+  let totalDu = 0;
   for (const entry of Object.values(data.entries)) {
     const mH = calculateHours(entry.morning);
     const aH = calculateHours(entry.afternoon);
     totalHours += mH + aH;
+    totalDu += entry.contractedHours;
     if (entry.morningWorksiteId)
       worksiteHours[entry.morningWorksiteId] = (worksiteHours[entry.morningWorksiteId] || 0) + mH;
     if (entry.afternoonWorksiteId)
       worksiteHours[entry.afternoonWorksiteId] = (worksiteHours[entry.afternoonWorksiteId] || 0) + aH;
   }
+  const overtime = totalHours - totalDu;
 
   const days = getDaysInMonth(data.year, data.month);
 
@@ -329,7 +341,9 @@ export default function App() {
                   <th className="border border-gray-300 px-2 py-1 text-center" colSpan={2}>Après-midi</th>
                   <th className="border border-gray-300 px-2 py-1 text-center">H mat.</th>
                   <th className="border border-gray-300 px-2 py-1 text-center">H après.</th>
-                  <th className="border border-gray-300 px-2 py-1 text-center">Total</th>
+                  <th className="border border-gray-300 px-2 py-1 text-center font-bold">Total</th>
+                  <th className="border border-gray-300 px-2 py-1 text-center">Du</th>
+                  <th className="border border-gray-300 px-2 py-1 text-center">Sup.</th>
                   <th className="border border-gray-300 px-2 py-1 text-center">Chantier matin</th>
                   <th className="border border-gray-300 px-2 py-1 text-center">Chantier après-midi</th>
                   <th className="border border-gray-300 px-2 py-1 text-center">Vac.</th>
@@ -407,6 +421,26 @@ export default function App() {
                       <td className="border border-gray-200 px-2 py-0.5 text-center font-mono font-bold text-blue-900">
                         {total > 0 ? total : ''}
                       </td>
+                      {/* Du */}
+                      <td className="border border-gray-200 px-1 py-0.5 text-center">
+                        <input
+                          type="number"
+                          step="0.25"
+                          value={entry?.contractedHours ?? ''}
+                          onChange={e => updateEntry(dateStr, { contractedHours: Number(e.target.value) })}
+                          className="w-12 border border-gray-200 rounded px-1 py-0 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        />
+                      </td>
+                      {/* Sup */}
+                      <td className={`border border-gray-200 px-2 py-0.5 text-center font-mono text-xs ${
+                        total > 0 && entry
+                          ? total - entry.contractedHours > 0 ? 'text-green-700 font-bold' : total - entry.contractedHours < 0 ? 'text-red-600' : 'text-gray-400'
+                          : 'text-gray-300'
+                      }`}>
+                        {total > 0 && entry ? (
+                          `${total - entry.contractedHours >= 0 ? '+' : ''}${(total - entry.contractedHours).toFixed(2)}`
+                        ) : ''}
+                      </td>
 
                       <td className="border border-gray-200 px-1 py-0.5">
                         <select
@@ -482,9 +516,19 @@ export default function App() {
                   <div className="font-mono font-bold text-blue-700">{(worksiteHours[ws.id] || 0).toFixed(2)}h</div>
                 </div>
               ))}
-            <div className="bg-green-50 border border-green-200 rounded px-3 py-2 text-sm ml-auto">
-              <div className="font-bold text-green-800">TOTAL</div>
+            <div className="bg-green-50 border border-green-200 rounded px-3 py-2 text-sm">
+              <div className="font-bold text-green-800">Réel</div>
               <div className="font-mono font-bold text-green-700 text-lg">{totalHours.toFixed(2)}h</div>
+            </div>
+            <div className="bg-indigo-50 border border-indigo-200 rounded px-3 py-2 text-sm">
+              <div className="font-bold text-indigo-800">Dû</div>
+              <div className="font-mono font-bold text-indigo-700 text-lg">{totalDu.toFixed(2)}h</div>
+            </div>
+            <div className={`border rounded px-3 py-2 text-sm ${overtime >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+              <div className={`font-bold ${overtime >= 0 ? 'text-emerald-800' : 'text-red-800'}`}>Sup.</div>
+              <div className={`font-mono font-bold text-lg ${overtime >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                {overtime >= 0 ? '+' : ''}{overtime.toFixed(2)}h
+              </div>
             </div>
           </div>
 
