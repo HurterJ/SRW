@@ -10,6 +10,7 @@ import {
   calculateHours,
 } from './utils/dateUtils';
 import { generatePDF } from './utils/pdfGenerator';
+import { generateExcel } from './utils/excelGenerator';
 import PrintSheet from './components/PrintSheet';
 import ProfileSelector from './components/ProfileSelector';
 import {
@@ -615,19 +616,27 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-col">
             <button
-              onClick={() => openPrintWindow(data)}
-              className="flex-1 bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded text-sm tracking-wide transition-colors shadow"
+              onClick={() => generateExcel(data)}
+              className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded text-sm tracking-wide transition-colors shadow"
             >
-              🖨 Imprimer / Exporter PDF (format F012)
+              ⬇ Télécharger Excel F012 (.xlsx) — Format exact
             </button>
-            <button
-              onClick={() => generatePDF(data)}
-              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded text-sm tracking-wide transition-colors shadow"
-            >
-              ⬇ Télécharger PDF rapide
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => openPrintWindow(data)}
+                className="flex-1 bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded text-sm tracking-wide transition-colors shadow"
+              >
+                🖨 Imprimer / Exporter PDF (format F012)
+              </button>
+              <button
+                onClick={() => generatePDF(data)}
+                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded text-sm tracking-wide transition-colors shadow"
+              >
+                ⬇ Télécharger PDF rapide
+              </button>
+            </div>
           </div>
         </section>
       </main>
