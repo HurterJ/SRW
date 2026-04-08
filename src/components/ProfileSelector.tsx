@@ -71,7 +71,7 @@ export default function ProfileSelector({ onSelect }: Props) {
           <div className="flex gap-2">
             <input
               type="text"
-              placeholder="Prénom Nom (ex: Julien Hurter)"
+              placeholder="Prénom Nom (ex: Jean Dupont)"
               value={newName}
               onChange={e => { setNewName(e.target.value); setError(''); }}
               onKeyDown={e => e.key === 'Enter' && handleAdd()}

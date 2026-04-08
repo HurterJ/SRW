@@ -86,10 +86,10 @@ function makeInitialData(name: string): TimesheetData {
     worksites: DEFAULT_WORKSITES,
     entries: {},
     defaultContractedHours: 8.5,
-    defaultMorningStart: '08:00',
-    defaultMorningEnd: '12:15',
-    defaultAfternoonStart: '13:00',
-    defaultAfternoonEnd: '17:30',
+    defaultMorningStart: '00:00',
+    defaultMorningEnd: '00:00',
+    defaultAfternoonStart: '00:00',
+    defaultAfternoonEnd: '00:00',
     ...saved,
   };
   // Rebuild entries if none saved for current month
