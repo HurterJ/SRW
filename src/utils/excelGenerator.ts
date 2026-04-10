@@ -34,7 +34,7 @@ const TIME_BLOCKS: TimeBlock[] = [
   { startMin: 1020, endMin: 1050, label: '17',    excelRows: [41, 42],    isLunch: false },
   { startMin: 1050, endMin: 1080, label: '17.30', excelRows: [43, 44],    isLunch: false },
   { startMin: 1080, endMin: 1110, label: '18',    excelRows: [45, 46],    isLunch: false },
-  { startMin: 1110, endMin: 1110, label: '18.30', excelRows: [47],        isLunch: false },
+  { startMin: 1110, endMin: 1140, label: '18.30', excelRows: [47],        isLunch: false },
 ];
 
 // ── Column mapping (1-indexed, matching F012 exactly) ────────────────────
@@ -197,7 +197,8 @@ export async function generateExcel(data: TimesheetData): Promise<void> {
     cell.alignment = { vertical: 'middle', horizontal: 'center' };
     cell.fill = wknd ? RED_FILL : { type: 'pattern', pattern: 'none' };
     cell.border = {
-      left: d === 1 ? MED : THIN,
+      left: d === 1 || d === 16 ? MED : THIN,
+      right: d === 15 || d === daysInMonth ? MED : THIN,
       top: MED,
       bottom: MED,
     };
@@ -248,8 +249,9 @@ export async function generateExcel(data: TimesheetData): Promise<void> {
       ws.mergeCells(firstRow, col1, lastRow, col1 + 1);
       const cell = ws.getCell(firstRow, col1);
       cell.border = {
+        left: d === 1 || d === 16 ? MED : THIN,
         bottom: HAIR,
-        ...(d === daysInMonth ? { right: MED } : {}),
+        ...(d === daysInMonth || d === 15 ? { right: MED } : {}),
       };
 
       if (wknd) {
@@ -281,7 +283,8 @@ export async function generateExcel(data: TimesheetData): Promise<void> {
       for (let d = 1; d <= daysInMonth; d++) {
         const col1 = dayCol1(d);
         const cell = ws.getCell(4, col1);
-        cell.border = { ...(cell.border as object || {}), top: MED, bottom: HAIR };
+        const prev = cell.border || {};
+        cell.border = { ...prev, top: MED, bottom: HAIR };
       }
     }
   }
@@ -290,7 +293,7 @@ export async function generateExcel(data: TimesheetData): Promise<void> {
   // Medium left/right borders on all grid rows
   for (let r = 4; r <= 47; r++) {
     const cell = ws.getCell(r, 65);
-    const existing = (cell.border as object) || {};
+    const existing = cell.border || {};
     cell.border = { ...existing, left: MED, right: MED };
     if (r === 4)  cell.border = { ...cell.border, top: MED };
     if (r === 47) cell.border = { ...cell.border, bottom: MED };

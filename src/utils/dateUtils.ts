@@ -50,7 +50,3 @@ export function calculateHours(range: { start: string; end: string } | null): nu
   return minutesToDecimalHours(diff);
 }
 
-export function formatHours(hours: number): string {
-  if (hours === 0) return '';
-  return hours % 1 === 0 ? `${hours}` : `${hours}`;
-}

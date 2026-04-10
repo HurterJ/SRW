@@ -474,4 +474,3 @@ export function generatePDF(data: TimesheetData): void {
   doc.save(filename);
 }
 
-export { getMonthName };
